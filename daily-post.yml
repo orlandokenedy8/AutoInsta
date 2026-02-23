@@ -2,7 +2,7 @@ name: Daily Instagram Post
 
 on:
   schedule:
-    - cron: '58 8 * * *'   # 8:58 AM UTC
+    - cron: '17 14 * * *'
   workflow_dispatch:
 
 jobs:
@@ -30,3 +30,4 @@ jobs:
           CLOUDINARY_CLOUD_NAME: ${{ secrets.CLOUDINARY_CLOUD_NAME }}
           CLOUDINARY_UPLOAD_PRESET: ${{ secrets.CLOUDINARY_UPLOAD_PRESET }}
         run: node bot-runner.js
+
