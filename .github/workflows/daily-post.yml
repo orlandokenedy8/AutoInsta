@@ -2,27 +2,31 @@ name: Daily Instagram Post
 
 on:
   schedule:
-    - cron: '0 9 * * *' # every day 9 AM UTC
-  workflow_dispatch: # manual trigger
+    - cron: '25 14 * * *'   # Runs daily at 7:55 PM IST
+  workflow_dispatch:
 
 jobs:
-  build:
+  post:
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v3
-      - name: Setup Node.js
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Setup Node
         uses: actions/setup-node@v3
         with:
-          node-version: '20'
+          node-version: 20
+
       - name: Install dependencies
         run: npm install
+
       - name: Run bot
         env:
-          # OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           IG_ACCOUNT_ID: ${{ secrets.IG_ACCOUNT_ID }}
           FB_ACCESS_TOKEN: ${{ secrets.FB_ACCESS_TOKEN }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          PUBLIC_IMAGE_URL: ${{ secrets.PUBLIC_IMAGE_URL }}
+          CLOUDINARY_CLOUD_NAME: ${{ secrets.CLOUDINARY_CLOUD_NAME }}
+          CLOUDINARY_UPLOAD_PRESET: ${{ secrets.CLOUDINARY_UPLOAD_PRESET }}
         run: node instagram-automation-bot.js
-
