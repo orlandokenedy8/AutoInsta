@@ -46,6 +46,40 @@ const getHashtags = () =>
     .slice(0, 5)
     .join(" ");
 
+// --------------------
+// Utility functions
+// --------------------
+function extractQuoteText(aiResponse) {
+  if (typeof aiResponse === "string") return aiResponse;
+
+  const candidates = ["content", "text", "message", "quote"];
+  for (const key of candidates) {
+    if (aiResponse[key] && typeof aiResponse[key] === "string") {
+      return aiResponse[key];
+    }
+  }
+
+  if (Array.isArray(aiResponse.choices) && aiResponse.choices.length > 0) {
+    const choice = aiResponse.choices[0];
+    if (choice.message && typeof choice.message.content === "string") {
+      return choice.message.content;
+    }
+  }
+
+  if (aiResponse.message && typeof aiResponse.message.content === "string") {
+    return aiResponse.message.content;
+  }
+
+  let text = JSON.stringify(aiResponse);
+  text = text.replace(
+    /"?(index|message|refusal|annotations|finish_reason|usage|via_ai_chat_service)"?:.*?(,|})/g,
+    ""
+  );
+  text = text.replace(/[{}"]/g, "").trim();
+
+  return text || "Motivational quote";
+}
+
 function sanitizeCaptionText(text) {
   if (typeof text !== "string") return "";
   return text
@@ -61,11 +95,7 @@ function sanitizeCaptionText(text) {
 async function uploadToCloudinary(base64) {
   try {
     const form = new URLSearchParams();
-    // Resize to 1080x1080 to ensure IG accepts
-    form.append(
-      "file",
-      `data:image/png;base64,${base64}`
-    );
+    form.append("file", `data:image/png;base64,${base64}`);
     form.append("upload_preset", CLOUDINARY_UPLOAD_PRESET);
 
     const res = await axios.post(
@@ -75,7 +105,6 @@ async function uploadToCloudinary(base64) {
     );
 
     if (!res.data?.secure_url) throw new Error("No URL from Cloudinary");
-    log(`🖼️ Cloudinary URL: ${res.data.secure_url}`);
     return res.data.secure_url;
   } catch (err) {
     log(
@@ -89,10 +118,6 @@ async function uploadToCloudinary(base64) {
 
 async function postToInstagram(caption, imageUrl) {
   try {
-    log("🔹 Posting to Instagram...");
-    log("Caption:", caption);
-    log("Image URL:", imageUrl);
-
     const mediaRes = await axios.post(
       `https://graph.facebook.com/v19.0/${IG_ACCOUNT_ID}/media`,
       new URLSearchParams({
@@ -103,10 +128,9 @@ async function postToInstagram(caption, imageUrl) {
       { headers: { "Content-Type": "application/x-www-form-urlencoded" } }
     );
 
-    if (!mediaRes.data?.id)
-      throw new Error(`No media ID returned: ${JSON.stringify(mediaRes.data)}`);
-
     const mediaId = mediaRes.data.id;
+    if (!mediaId) throw new Error("No media ID returned");
+
     log(`✅ Media created: ${mediaId}`);
 
     const publishRes = await axios.post(
@@ -118,16 +142,15 @@ async function postToInstagram(caption, imageUrl) {
       { headers: { "Content-Type": "application/x-www-form-urlencoded" } }
     );
 
-    log("✅ Media published successfully:", publishRes.data);
+    log("✅ Media published successfully");
     return publishRes.data;
   } catch (err) {
-    // Detailed IG API error logging
     log(
-      `❌ Instagram API error: ${
-        err.response?.data
-          ? JSON.stringify(err.response.data, null, 2)
-          : err.message
-      }`
+      `❌ Instagram API error: ${JSON.stringify(
+        err.response?.data || err.message,
+        null,
+        2
+      )}`
     );
     throw err;
   }
@@ -135,7 +158,6 @@ async function postToInstagram(caption, imageUrl) {
 
 async function sendTelegram(text, imageUrl = null) {
   try {
-    if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) return;
     if (imageUrl) {
       await axios.post(
         `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendPhoto`,
@@ -162,7 +184,78 @@ async function sendTelegram(text, imageUrl = null) {
 }
 
 // --------------------
-// /receive-ai route
+// Standalone Bot Function
+// --------------------
+async function runBot() {
+  try {
+    log("🚀 Running standalone bot...");
+
+    const themes = ["discipline and freedom", "consistency and progress", "growth mindset", "daily motivation"];
+    const theme = themes[Math.floor(Math.random() * themes.length)];
+    log(`🎯 Selected theme: ${theme}`);
+
+    // Generate quote
+    const rawQuote = await puter.ai.chat(
+      "You are executing Phase 1 and Phase 2. Select one short, meaningful, properly attributed motivational quote about " +
+        theme +
+        " that is philosophically substantial, universally resonant, contextually accurate, and not an overused cliché. The quote must have a real confirmed author, be maximum 12 words, and contain no quotation marks. Internally analyze its emotional tone, psychological energy, symbolic meaning, emotional magnitude, and intimacy scale, but do not output this analysis. Output strictly in this format: Quote — Author.",
+      { model: "gpt-5-nano" }
+    );
+
+    const quote = sanitizeCaptionText(extractQuoteText(rawQuote));
+    log(`💬 Generated quote: ${quote}`);
+
+    // Generate image
+    const imageElement = await puter.ai.txt2img(
+      "Using this quote as the emotional and symbolic anchor: " +
+        quote +
+        ". Create a true 4K 3840x3840 Instagram image with cinematic lighting, natural depth, DSLR realism, narrative authenticity, and professional editorial quality.",
+      { model: "gpt-image-1.5", size: "3840x3840" }
+    );
+
+    // Convert to base64 (Node compatible)
+    const canvas = globalThis.document
+      ? document.createElement("canvas")
+      : { getContext: () => ({ drawImage: () => {} }), width: 3840, height: 3840 };
+    canvas.width = imageElement.width;
+    canvas.height = imageElement.height;
+    canvas.getContext("2d").drawImage(imageElement, 0, 0);
+    const base64 = canvas.toDataURL?.("image/png")?.replace("data:image/png;base64,", "") || "";
+
+    // Upload to Cloudinary
+    const imageUrl = await uploadToCloudinary(base64);
+    log(`🖼️ Uploaded image URL: ${imageUrl}`);
+
+    // Post to Instagram
+    const caption = `${quote}\n\n${getHashtags()}`;
+    await postToInstagram(caption, imageUrl);
+
+    // Send Telegram notification
+    const telegramText = `✅ <b>Instagram Post Published</b>\n\n${quote}\n\n${getHashtags()}`;
+    await sendTelegram(telegramText, imageUrl);
+
+    log("✅ Standalone bot run completed successfully!");
+  } catch (err) {
+    log(`❌ Standalone bot failed: ${err.message}`);
+    await sendTelegram(`❌ <b>Instagram Post Failed</b>\n${err.message}`);
+  }
+}
+
+// Run bot if called with --run-bot
+if (process.argv.includes("--run-bot")) {
+  runBot()
+    .then(() => {
+      log("✅ Done");
+      process.exit(0);
+    })
+    .catch((err) => {
+      log("❌ Failed:", err);
+      process.exit(1);
+    });
+}
+
+// --------------------
+// Existing Express Server Routes
 // --------------------
 app.post("/receive-ai", async (req, res) => {
   try {
@@ -171,15 +264,17 @@ app.post("/receive-ai", async (req, res) => {
 
     log("📥 Received AI content");
 
-    const cleanQuote = sanitizeCaptionText(quote);
+    const rawQuote = extractQuoteText(quote);
+    const cleanQuote = sanitizeCaptionText(rawQuote);
+
     const caption = `${cleanQuote}\n\n${getHashtags()}`;
 
     const imageUrl = await uploadToCloudinary(base64);
 
-    // Post to Instagram with detailed logging
     await postToInstagram(caption, imageUrl);
 
-    await sendTelegram(`✅ <b>Instagram Post Published</b>\n\n${cleanQuote}`, imageUrl);
+    const telegramText = `✅ <b>Instagram Post Published</b>\n\n${cleanQuote}\n\n${getHashtags()}`;
+    await sendTelegram(telegramText, imageUrl);
 
     res.json({ success: true });
   } catch (err) {
@@ -194,7 +289,6 @@ app.get("/", (req, res) => {
 <!DOCTYPE html>
 <html>
 <body>
-<h2>Running Daily Instagram Bot...</h2>
 <script src="https://js.puter.com/v2/"></script>
 <script>
 const themes=["discipline and freedom","consistency and progress","growth mindset","daily motivation"];
@@ -216,8 +310,8 @@ async function run() {
     canvas.getContext("2d").drawImage(imageElement,0,0);
     const base64=canvas.toDataURL("image/png").replace("data:image/png;base64,","");
     await fetch("/receive-ai",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({quote,base64})});
-    document.body.innerHTML="<h2>✅ Posted Successfully</h2>";
-  } catch(e){document.body.innerHTML="<h2>❌ Error: "+e.message+"</h2>";}
+    document.body.innerHTML="<h2>Posted Successfully ✅</h2>";
+  } catch(e){document.body.innerHTML="<h2>Error: "+e.message+"</h2>";}
 }
 run();
 </script>
@@ -227,4 +321,6 @@ run();
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => log(`🌐 Server running at http://localhost:${PORT}`));
+app.listen(PORT, () => {
+  log(`🌐 Server running at http://localhost:${PORT}`);
+});
