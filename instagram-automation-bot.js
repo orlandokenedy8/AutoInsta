@@ -1,3 +1,4 @@
+// index.js
 import "dotenv/config";
 import express from "express";
 import axios from "axios";
@@ -45,14 +46,13 @@ const getHashtags = () =>
     .slice(0, 5)
     .join(" ");
 
-// Utility to safely extract quote text from AI response object
+// --------------------
+// Utility functions
+// --------------------
 function extractQuoteText(aiResponse) {
-  if (typeof aiResponse === "string") {
-    return aiResponse;
-  }
+  if (typeof aiResponse === "string") return aiResponse;
 
   const candidates = ["content", "text", "message", "quote"];
-
   for (const key of candidates) {
     if (aiResponse[key] && typeof aiResponse[key] === "string") {
       return aiResponse[key];
@@ -73,14 +73,13 @@ function extractQuoteText(aiResponse) {
   let text = JSON.stringify(aiResponse);
   text = text.replace(
     /"?(index|message|refusal|annotations|finish_reason|usage|via_ai_chat_service)"?:.*?(,|})/g,
-    "",
+    ""
   );
   text = text.replace(/[{}"]/g, "").trim();
 
   return text || "Motivational quote";
 }
 
-// Sanitize the extracted quote text by removing extra quotes, colons, and trimming
 function sanitizeCaptionText(text) {
   if (typeof text !== "string") return "";
   return text
@@ -93,7 +92,6 @@ function sanitizeCaptionText(text) {
     .trim();
 }
 
-// Upload Base64 image to Cloudinary
 async function uploadToCloudinary(base64) {
   try {
     const form = new URLSearchParams();
@@ -103,7 +101,7 @@ async function uploadToCloudinary(base64) {
     const res = await axios.post(
       `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`,
       form,
-      { headers: { "Content-Type": "application/x-www-form-urlencoded" } },
+      { headers: { "Content-Type": "application/x-www-form-urlencoded" } }
     );
 
     if (!res.data?.secure_url) throw new Error("No URL from Cloudinary");
@@ -112,13 +110,12 @@ async function uploadToCloudinary(base64) {
     log(
       `❌ Cloudinary upload failed: ${
         err.response?.data?.error?.message || err.message
-      }`,
+      }`
     );
     throw err;
   }
 }
 
-// Post to Instagram
 async function postToInstagram(caption, imageUrl) {
   try {
     const mediaRes = await axios.post(
@@ -128,7 +125,7 @@ async function postToInstagram(caption, imageUrl) {
         caption,
         access_token: FB_ACCESS_TOKEN,
       }),
-      { headers: { "Content-Type": "application/x-www-form-urlencoded" } },
+      { headers: { "Content-Type": "application/x-www-form-urlencoded" } }
     );
 
     const mediaId = mediaRes.data.id;
@@ -142,7 +139,7 @@ async function postToInstagram(caption, imageUrl) {
         creation_id: mediaId,
         access_token: FB_ACCESS_TOKEN,
       }),
-      { headers: { "Content-Type": "application/x-www-form-urlencoded" } },
+      { headers: { "Content-Type": "application/x-www-form-urlencoded" } }
     );
 
     log("✅ Media published successfully");
@@ -152,14 +149,13 @@ async function postToInstagram(caption, imageUrl) {
       `❌ Instagram API error: ${JSON.stringify(
         err.response?.data || err.message,
         null,
-        2,
-      )}`,
+        2
+      )}`
     );
     throw err;
   }
 }
 
-// Send Telegram message (with optional image URL for preview)
 async function sendTelegram(text, imageUrl = null) {
   try {
     if (imageUrl) {
@@ -170,7 +166,7 @@ async function sendTelegram(text, imageUrl = null) {
           photo: imageUrl,
           caption: text,
           parse_mode: "HTML",
-        },
+        }
       );
     } else {
       await axios.post(
@@ -179,7 +175,7 @@ async function sendTelegram(text, imageUrl = null) {
           chat_id: TELEGRAM_CHAT_ID,
           text,
           parse_mode: "HTML",
-        },
+        }
       );
     }
   } catch (err) {
@@ -187,6 +183,80 @@ async function sendTelegram(text, imageUrl = null) {
   }
 }
 
+// --------------------
+// Standalone Bot Function
+// --------------------
+async function runBot() {
+  try {
+    log("🚀 Running standalone bot...");
+
+    const themes = ["discipline and freedom", "consistency and progress", "growth mindset", "daily motivation"];
+    const theme = themes[Math.floor(Math.random() * themes.length)];
+    log(`🎯 Selected theme: ${theme}`);
+
+    // Generate quote
+    const rawQuote = await puter.ai.chat(
+      "You are executing Phase 1 and Phase 2. Select one short, meaningful, properly attributed motivational quote about " +
+        theme +
+        " that is philosophically substantial, universally resonant, contextually accurate, and not an overused cliché. The quote must have a real confirmed author, be maximum 12 words, and contain no quotation marks. Internally analyze its emotional tone, psychological energy, symbolic meaning, emotional magnitude, and intimacy scale, but do not output this analysis. Output strictly in this format: Quote — Author.",
+      { model: "gpt-5-nano" }
+    );
+
+    const quote = sanitizeCaptionText(extractQuoteText(rawQuote));
+    log(`💬 Generated quote: ${quote}`);
+
+    // Generate image
+    const imageElement = await puter.ai.txt2img(
+      "Using this quote as the emotional and symbolic anchor: " +
+        quote +
+        ". Create a true 4K 3840x3840 Instagram image with cinematic lighting, natural depth, DSLR realism, narrative authenticity, and professional editorial quality.",
+      { model: "gpt-image-1.5", size: "3840x3840" }
+    );
+
+    // Convert to base64 (Node compatible)
+    const canvas = globalThis.document
+      ? document.createElement("canvas")
+      : { getContext: () => ({ drawImage: () => {} }), width: 3840, height: 3840 };
+    canvas.width = imageElement.width;
+    canvas.height = imageElement.height;
+    canvas.getContext("2d").drawImage(imageElement, 0, 0);
+    const base64 = canvas.toDataURL?.("image/png")?.replace("data:image/png;base64,", "") || "";
+
+    // Upload to Cloudinary
+    const imageUrl = await uploadToCloudinary(base64);
+    log(`🖼️ Uploaded image URL: ${imageUrl}`);
+
+    // Post to Instagram
+    const caption = `${quote}\n\n${getHashtags()}`;
+    await postToInstagram(caption, imageUrl);
+
+    // Send Telegram notification
+    const telegramText = `✅ <b>Instagram Post Published</b>\n\n${quote}\n\n${getHashtags()}`;
+    await sendTelegram(telegramText, imageUrl);
+
+    log("✅ Standalone bot run completed successfully!");
+  } catch (err) {
+    log(`❌ Standalone bot failed: ${err.message}`);
+    await sendTelegram(`❌ <b>Instagram Post Failed</b>\n${err.message}`);
+  }
+}
+
+// Run bot if called with --run-bot
+if (process.argv.includes("--run-bot")) {
+  runBot()
+    .then(() => {
+      log("✅ Done");
+      process.exit(0);
+    })
+    .catch((err) => {
+      log("❌ Failed:", err);
+      process.exit(1);
+    });
+}
+
+// --------------------
+// Existing Express Server Routes
+// --------------------
 app.post("/receive-ai", async (req, res) => {
   try {
     const { quote, base64 } = req.body;
@@ -194,20 +264,15 @@ app.post("/receive-ai", async (req, res) => {
 
     log("📥 Received AI content");
 
-    // Extract and sanitize quote
     const rawQuote = extractQuoteText(quote);
     const cleanQuote = sanitizeCaptionText(rawQuote);
 
-    // Caption with hashtags
     const caption = `${cleanQuote}\n\n${getHashtags()}`;
 
-    // Upload image to Cloudinary
     const imageUrl = await uploadToCloudinary(base64);
 
-    // Post to Instagram
     await postToInstagram(caption, imageUrl);
 
-    // Send Telegram notification with photo and caption
     const telegramText = `✅ <b>Instagram Post Published</b>\n\n${cleanQuote}\n\n${getHashtags()}`;
     await sendTelegram(telegramText, imageUrl);
 
