@@ -2,7 +2,7 @@ name: Daily Instagram Post
 
 on:
   schedule:
-    - cron: '25 14 * * *'   # Runs daily at 7:55 PM IST
+    - cron: '25 3 * * *'   # Runs daily at 7:55 PM IST
   workflow_dispatch:
 
 jobs:
@@ -30,4 +30,4 @@ jobs:
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           CLOUDINARY_CLOUD_NAME: ${{ secrets.CLOUDINARY_CLOUD_NAME }}
           CLOUDINARY_UPLOAD_PRESET: ${{ secrets.CLOUDINARY_UPLOAD_PRESET }}
-        run: node instagram-automation-bot.js --run-bot
+        run: curl -s https://autoinsta-m6li.onrender.com/
