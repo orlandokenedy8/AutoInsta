@@ -196,21 +196,23 @@ async function runBot() {
 
     // Generate quote
     const rawQuote = await puter.ai.chat(
-      `You are executing Phase 1 and Phase 2. Select one short, meaningful, properly attributed motivational quote about ${theme} that is philosophically substantial, universally resonant, contextually accurate, and not an overused cliché. The quote must have a real confirmed author, be maximum 12 words, and contain no quotation marks. Do not add commentary. Output strictly in this format: Quote — Author.`,
+      "You are executing Phase 1 and Phase 2. Select one short, meaningful, properly attributed motivational quote about " +
+        theme +
+        " that is philosophically substantial, universally resonant, contextually accurate, and not an overused cliché. The quote must have a real confirmed author, be maximum 12 words, and contain no quotation marks. Internally analyze its emotional tone, psychological energy, symbolic meaning, emotional magnitude, and intimacy scale, but do not output this analysis. Output strictly in this format: Quote — Author.",
       { model: "gpt-5-nano" }
     );
-  
-    const { text, author } = parseQuote(rawQuote);
-    
-    const quote = sanitizeCaptionText(text);
-    const authorName = sanitizeCaptionText(author);
-    
-    log(`💬 Generated quote: ${quote} — ${authorName}`);
 
+    const quote = sanitizeCaptionText(extractQuoteText(rawQuote));
+    log(`💬 Generated quote: ${quote}`);
+
+    // Generate image
     const imageElement = await puter.ai.txt2img(
-      `Using this quote as the emotional and symbolic anchor: ${quote}. Create a 4K 3840x4800 minimalist editorial Instagram quote image. Do not reuse visual themes, environments, or symbolic elements from prior outputs. The background must be visually distinct and unpredictable. Maintain minimalist composition with strong negative space for text overlay. Use only one primary focal element. Symbolism must be subtle and indirect. Lighting must be natural but varied. Composition must differ in perspective, spatial depth, and tonal range from previous outputs. Prioritize novelty over familiarity while preserving calm editorial refinement and professional DSLR realism.`,
-      { model: "gpt-image-1.5", size: "3840x4800" }
+      "Using this quote as the emotional and symbolic anchor: " +
+        quote +
+        ". Create a true 4K 3840x3840 Instagram image with cinematic lighting, natural depth, DSLR realism, narrative authenticity, and professional editorial quality.",
+      { model: "gpt-image-1.5", size: "3840x3840" }
     );
+
     // Convert to base64 (Node compatible)
     const canvas = globalThis.document
       ? document.createElement("canvas")
@@ -322,5 +324,3 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   log(`🌐 Server running at http://localhost:${PORT}`);
 });
-
-
