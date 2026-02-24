@@ -267,7 +267,7 @@ app.post("/receive-ai", async (req, res) => {
     const rawQuote = extractQuoteText(quote);
     const cleanQuote = sanitizeCaptionText(rawQuote);
 
-    const caption = `${cleanQuote}\n\n${getHashtags()}`;
+    const caption = `${cleanQuote}\n\n${getHashtags()}`.trim();
 
     const imageUrl = await uploadToCloudinary(base64);
 
