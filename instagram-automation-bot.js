@@ -302,7 +302,7 @@ async function run() {
 
     const imageElement = await puter.ai.txt2img(
     "Using this quote as the emotional and symbolic anchor: " + quote + ". Create a true 4K 3840x3840 square Instagram image that feels commissioned, professionally shot in RAW, expertly color graded, luxury editorial quality, and indistinguishable from real photography. Design a physically plausible real-world scene with narrative authenticity, natural complexity balance, and clear foreground, midground, and dimensional background depth. Avoid staged symbolism, summit silhouettes, exaggerated metaphor stacking, visual clichés, overcrowding, or oversimplification. Render as captured on a high-end full-frame DSLR or cinema camera with authentic focal length selection, gradual depth of field falloff, slight lens edge softness, smooth highlight rolloff, realistic exposure balance, subtle sensor grain, natural shadow depth variation, accurate reflections, and physically plausible scale relationships. Use dark cinematic lighting aligned emotionally with the quote, maintain directional light consistency, realistic color temperature, professional contrast curves, natural tonal transitions, and avoid hyper-saturation or artificial HDR effects. Apply asymmetrical composition with intentional eye movement, clear focal hierarchy, balanced negative space for typography, and natural perspective geometry. Overlay the quote and author in refined editorial typography that is perfectly crisp at 4K with accurate kerning, harmonious with lighting direction, respecting scene depth, maintaining print-safe margins, and placing the author subtly beneath the quote with elegant visual weight balance.",
-    { model: "gpt-image-1.5", size: "3840x3840" }
+    { model: "gemini-2.5-flash-image-preview", size: "3840x3840" }
     );
 
     const canvas=document.createElement("canvas");
@@ -324,4 +324,5 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   log(`🌐 Server running at http://localhost:${PORT}`);
 });
+
 
