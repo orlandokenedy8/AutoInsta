@@ -210,7 +210,7 @@ async function runBot() {
       "Using this quote as the emotional and symbolic anchor: " +
         quote +
         ". Create a true 4K 3840x3840 Instagram image with cinematic lighting, natural depth, DSLR realism, narrative authenticity, and professional editorial quality.",
-      { model: "gpt-image-1.5", size: "3840x3840" }
+      { model: "gemini-2.5-flash-image-preview", size: "3840x3840" }
     );
 
     // Convert to base64 (Node compatible)
@@ -324,3 +324,4 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   log(`🌐 Server running at http://localhost:${PORT}`);
 });
+
