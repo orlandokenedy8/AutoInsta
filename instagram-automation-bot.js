@@ -293,7 +293,7 @@ app.get("/", (req, res) => {
 <script>
 const themes=["discipline and freedom","consistency and progress","growth mindset","daily motivation"];
 async function run() {
-  try {
+  // try {
     const theme = themes[Math.floor(Math.random()*themes.length)];
     const quote = await puter.ai.chat(
     "You are executing Phase 1 and Phase 2. Select one short, meaningful, properly attributed motivational quote about " + theme + " that is philosophically substantial, universally resonant, contextually accurate, and not an overused cliché. The quote must have a real confirmed author, be maximum 12 words, and contain no quotation marks. Internally analyze its emotional tone, psychological energy, symbolic meaning, emotional magnitude, and intimacy scale, but do not output this analysis. Output strictly in this format: Quote — Author.",
@@ -302,7 +302,7 @@ async function run() {
 
     const imageElement = await puter.ai.txt2img(
     "Using this quote as the emotional and symbolic anchor: " + quote + ". Create a true 4K 3840x3840 square Instagram image that feels commissioned, professionally shot in RAW, expertly color graded, luxury editorial quality, and indistinguishable from real photography. Design a physically plausible real-world scene with narrative authenticity, natural complexity balance, and clear foreground, midground, and dimensional background depth. Avoid staged symbolism, summit silhouettes, exaggerated metaphor stacking, visual clichés, overcrowding, or oversimplification. Render as captured on a high-end full-frame DSLR or cinema camera with authentic focal length selection, gradual depth of field falloff, slight lens edge softness, smooth highlight rolloff, realistic exposure balance, subtle sensor grain, natural shadow depth variation, accurate reflections, and physically plausible scale relationships. Use dark cinematic lighting aligned emotionally with the quote, maintain directional light consistency, realistic color temperature, professional contrast curves, natural tonal transitions, and avoid hyper-saturation or artificial HDR effects. Apply asymmetrical composition with intentional eye movement, clear focal hierarchy, balanced negative space for typography, and natural perspective geometry. Overlay the quote and author in refined editorial typography that is perfectly crisp at 4K with accurate kerning, harmonious with lighting direction, respecting scene depth, maintaining print-safe margins, and placing the author subtly beneath the quote with elegant visual weight balance.",
-    { model: "gemini-2.5-flash-image-preview", size: "3840x3840" }
+    { model: "gemini-3-pro-image-preview", size: "3840x3840" }
     );
 
     const canvas=document.createElement("canvas");
@@ -311,7 +311,8 @@ async function run() {
     const base64=canvas.toDataURL("image/png").replace("data:image/png;base64,","");
     await fetch("/receive-ai",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({quote,base64})});
     document.body.innerHTML="<h2>Posted Successfully ✅</h2>";
-  } catch(e){document.body.innerHTML="<h2>Error: "+e.message+"</h2>";}
+  // } 
+  // catch(e){document.body.innerHTML="<h2>Error: "+e.message+"</h2>";}
 }
 run();
 </script>
@@ -324,5 +325,6 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   log(`🌐 Server running at http://localhost:${PORT}`);
 });
+
 
 
