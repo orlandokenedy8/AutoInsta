@@ -280,7 +280,7 @@ app.post("/receive-ai", async (req, res) => {
   } catch (err) {
     log(`❌ Post failed: ${err.message}`);
     await sendTelegram(`❌ <b>Instagram Post Failed</b>\n${err.message}`);
-    res.status(500).json({ error: err.message });
+    // res.status(500).json({ error: err.message });
   }
 });
 
@@ -325,6 +325,7 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   log(`🌐 Server running at http://localhost:${PORT}`);
 });
+
 
 
 
